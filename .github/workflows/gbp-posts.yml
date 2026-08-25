@@ -1,0 +1,30 @@
+name: Publish due GBP posts
+on:
+  schedule:
+    - cron: "0 16 * * 1,3,5" # Mon/Wed/Fri ~9am Pacific
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Validate every queued payload against the Make schema
+        run: python code/check_gbp_payload.py gbp-queue
+      - name: Send at most one due post to the Make webhook
+        run: python code/publish_due_gbp_posts.py
+        env:
+          MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
+      - name: Commit queue changes
+        run: |
+          git config user.name "gbp-post-scheduler"
+          git config user.email "actions@users.noreply.github.com"
+          git add gbp-queue
+          git diff --cached --quiet || git commit -m "chore: GBP post published by scheduler"
+          git push

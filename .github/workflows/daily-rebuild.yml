@@ -1,0 +1,62 @@
+name: Daily rebuild - publish due pages
+# The build excludes future-dated pages, so ANY deploy releases whatever came due.
+# Vercel deploys on every push (Git integration), so this just needs to cause a push.
+# An empty commit does that - no deploy hook, no Vercel token, no secrets at all.
+on:
+  schedule:
+    - cron: "0 15 * * *" # daily, ~8am Pacific
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: What this run releases
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import datetime, pathlib, re
+          today = datetime.date.today()
+          # Find the app root - it is NOT always website/
+          root = next((p.parent for p in sorted(pathlib.Path(".").glob("*/package.json")) + [pathlib.Path("package.json")]
+                       if p.exists() and '"next"' in p.read_text()), pathlib.Path("."))
+          app = root / "app"
+          released, held, undated = [], [], 0
+          for f in sorted(app.rglob("page.tsx")):
+              parts = [p for p in f.relative_to(app).parent.parts if p]
+              if any(p.startswith(("_", "(", "[")) for p in parts) or "api" in parts:
+                  continue
+              route = "/" + "/".join(parts) if parts else "/"
+              m = re.search(r'publishDate\s*[:=]\s*["\'](\d{4}-\d{2}-\d{2})', f.read_text(errors="ignore"))
+              if not m:
+                  undated += 1
+                  continue
+              d = datetime.date.fromisoformat(m.group(1))
+              (released if d <= today else held).append((route, d))
+          print(f"## Publish queue &middot; {today:%a %d %b %Y}\n")
+          print(f"**Released today or earlier:** {len(released)}  |  **Still held:** {len(held)}  |  Undated (always live): {undated}\n")
+          if released:
+              print("### Live\n")
+              for r, d in sorted(released, key=lambda x: x[1], reverse=True):
+                  print(f"- `{r}` &mdash; since {d:%a %d %b}")
+          if held:
+              print("\n### Held\n")
+              for r, d in sorted(held, key=lambda x: x[1]):
+                  print(f"- `{r}` &mdash; goes live {d:%a %d %b} ({(d - today).days}d)")
+          if not held:
+              print("\n_Queue is empty &mdash; nothing waiting._")
+          PY
+
+      - name: Nudge a deploy so due pages go live
+        run: |
+          # Reuse the last commit's author. It already deployed successfully, so by
+          # definition it matches a Vercel seat - hardcoding a name here would break
+          # every other member's deploys with TEAM_ACCESS_REQUIRED.
+          git config user.name  "$(git log -1 --format='%an')"
+          git config user.email "$(git log -1 --format='%ae')"
+          git commit --allow-empty -m "chore: daily rebuild - release pages due $(date -u +%Y-%m-%d)"
+          git push
