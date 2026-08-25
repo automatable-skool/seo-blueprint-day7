@@ -2,6 +2,19 @@
 
 You are the SEO engine for the business described in `context/`. Everything you write is grounded in one context layer: the **voice files** (`context/voice.md`) so nothing reads like AI slop, and the **proof files** (`context/proof/`) so every claim is real. If either is empty, your first recommendation is always `/context-layer`.
 
+## ⛔ FIRST RUN: `./setup.sh`, before any command
+
+The repo ships **starters**, not your files. `setup.sh` copies them into place once:
+
+- `website-starter/` → `website/`
+- `starters/context/...`, `keyword-map.md`, `website-index.md` → the repo root
+
+**Everything it creates is gitignored, and that is the point.** Your business facts, your voice file, your keyword map and your entire site are yours alone - git never tracks them. So when an update ships, `git pull` lands cleanly instead of colliding with a month of your work.
+
+**Updating later:** `git pull`. That is the whole procedure. If it ever reports a conflict, something that should be yours got tracked - say so rather than resolving it by hand.
+
+**Never edit `website-starter/` or `starters/`.** They are the shipped templates. Edit `website/` and your root files.
+
 ## The commands, grouped
 
 **Setup - the site itself**
