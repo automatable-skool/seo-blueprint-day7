@@ -60,6 +60,27 @@ If something is genuinely broken and non-recoverable (a dead embed pointing at a
 
 ---
 
+## ⛔ THE WAIVER RULE - two scores, and every waiver carries a type, a reason and evidence
+
+A site can be fully repaired and still not read 100, because some checks fail for reasons no fix pass can touch. Without a rule for that, the loop either runs forever or the finished job looks failed. So:
+
+**Every waived item carries three things**, in the report and in `audit-report.md`: the **type** (one of the three below), a one-line **reason**, and the **evidence** that puts it in that type (the header, the log line, the owner's words). A waiver with no evidence is a skipped item wearing a label.
+
+**Three types, and only three:**
+- **Platform limit** - the platform physically cannot do it: a WordPress theme that hard-codes the title, a Wix editor with no file access, a host that controls the server config, a third-party script (booking widget, chat, tracking) the owner needs and cannot modify. Evidence: name the plugin, theme, host or script.
+- **Crawler artifact** - the tool is wrong, the site is not: a Semrush warning on a URL that returns 200 in a browser, a Lighthouse run that flags a lazy-loaded image the page needs, a `site:` count that lags the Search Console export, a duplicate-content flag on a canonicalised page. Evidence: the live check that contradicts the tool, stated so the owner can repeat it.
+- **Owner decision** - fixable, and the owner said no: a brand colour that fails contrast, a deliberately unlinked page, a design choice. Evidence: the owner's yes, recorded on the item. Never waive as an owner decision something the owner has not been asked about.
+
+**Two scores, always both:**
+- **Fixable score** - the denominator excludes waived items. This is the number the loop drives to 100 and the number the report card shows as "after". A fixable score of 100 means: everything that could be fixed was fixed.
+- **Raw score** - every check counted, waived ones as failures. This is what the tool would say and what a rival's audit would find. It sits next to the fixable score as "raw N, M waived", never hidden.
+
+The loop target in step 5 is the fixable score. Waived items never enter the loop, never get silently retried, and never disappear: they live in "Not measured · waived" on the HTML report and under **Waived** in `audit-report.md`, dated, so the next run re-checks whether the reason still holds (a plugin update can turn a platform limit into a fix).
+
+**What a waiver is not:** a check that is failing because it is hard, slow, or boring. Those stay in the loop.
+
+---
+
 ## ⛔ THE SAMPLING RULE - a silent sample is worse than a stated one
 
 **If a layer was sampled rather than run in full, that layer's line in the report says so, in the report, every time.** Not in chat, not implied by a page count somewhere else.
@@ -199,7 +220,7 @@ Report the failing checks grouped and counted across the site, not page by page,
 Lighthouse: Performance, Accessibility, Best Practices, SEO - target 100 on all four.
 
 - Test the REAL thing: production build, never dev mode (dev scores are meaningless). Static lane: `npm run build`, then serve the build locally - `npx next start -p 4321` on this template's default server build, or `npx serve out` if a member has added `output: "export"` back - and run `npx lighthouse` against it, or against the live deployed URL. WordPress: against the live site.
-- **Test more than the homepage.** One page per template is the minimum: home, one service page, one blog post, one city page. Template fixes cascade to every page built from them, and a homepage-only score says nothing about the 40 city pages.
+- **Test more than the homepage.** One page per template is the minimum: home, one service page, one blog post. City pages are service pages by template, so they never get their own card; the service-page score covers them. Template fixes cascade to every page built from them, and a homepage-only score says nothing about the 40 city pages.
 
 **Lighthouse is lab data, and the report must say so on the line.** It is one throttled run, on one machine, at one moment, on a simulated connection. Two runs on the same page routinely differ by 10 points.
 
@@ -280,6 +301,21 @@ Grade all of these:
 - **Review recency** - how many in the last 90 days, for the site and for each competitor. A 200-review profile with nothing in a year loses to a 60-review profile getting four a month
 - **Review response rate** - what share of reviews have an owner reply, and how fast
 - **Citation coverage** - which of the Tier 1 and Tier 2 directories in `references/citations.md` have a listing, which are missing, and which carry a stale NAP variant
+
+**Map pack position from Semrush, when a tracking campaign exists.** Position Tracking supports the local pack directly: `projects` → the campaign ID, then `tracking_position_organic` with `linktype_filter=1` (local pack only), `business_name` set to the exact Business Profile name, and the campaign's city or ZIP as the location. That returns the pack position per money keyword, per location, with history - use it before a live search, and say which one the numbers came from (`local.mapPackSource`). No campaign? Say so in the report ("map pack: live search, one location, one day") and fall back to the live search. Setting the campaign up is the owner's click, in their Semrush project; never imply the connector created it.
+
+**The marks, from `references/gbp-setup.md` - grade the profile against these numbers, not against "filled or empty":**
+- **Categories: 10** - 1 primary + 9 secondary. Report `N of 10`. A primary that differs from what the map-pack rivals use is its own finding.
+- **Services: 50** (target 70 with extras, minimum 30). Report `N of 50`. Each service named without the city, matched to a `[service] [city]` keyword with volume, ranked by that volume.
+- **Service areas: 20** cities, service-area businesses only, inside a 60-minute drive. Report `N of 20`. Location businesses list one city; say so instead of scoring it.
+- **Products: 20** (target 30 with extras), every one with all six fields - name, price, description with the keyword first, category, link to the matching page, photo. Report `N of 20`, and count a product missing any field as not there.
+The Local layer's 0-100 score is the average of those four ratios, scaled down by NAP conflicts and the review gap. On the HTML report the profile rows read `Categories · mark 10 · 1 of 10`, and so on.
+
+**Grade the profile contents, not just the fields:**
+- **Categories** - against the map-pack rivals' categories too. A secondary the rivals all carry is a finding.
+- **Services** - matched to a money keyword from `keyword-map.md` with its volume, and whether a page exists for it. Two failures: a service the business sells that is not on the profile, and a service named in words nobody searches ("Plumbing repair") when the keyword is "water heater repair austin".
+- **Products** - each title carries the keyword, each tile has all six fields.
+The Business Profile contents are read from the public Maps listing (and `gbp-{slug}.md` when it exists); Semrush does not expose them.
 
 **Routing:** profile setup, categories, services, attributes and the citation campaign go to `/gbp`. Review count, recency and response rate go to `/review-generator`. Neither is fixed inside this command's loop.
 
@@ -402,7 +438,7 @@ Sites over ~50 pages: loop template-level + worst offenders first, then batch th
 **5. Give me the undo.** Every fix pass ends with the exact command to throw all of it away - the `git checkout` plus any files to remove. One line, copy-pasteable. Nobody approves changes they can't reverse.
 
 **The deliverable - one legible report:**
-- **The scoreboard:** before → after for every required line above, with the competitor numbers held constant beside them. Plus the one-line brag ("46 → 100 in one run").
+- **The scoreboard:** before → after for every required line above, with the competitor numbers held constant beside them, as two numbers: the fixable score and the raw score with the waived count. Plus the one-line brag ("46 → 100 fixable, raw 96 with 2 waived").
 - **The page list** - every page, one row, plain English: on-page pass, Lighthouse template, GEO pass, cannibalization flag, proof count (target 5+), thin flag.
 - **The AI-surface baseline** - each prompt, each surface, who got cited, whether this site did. Dated, so next month's run has something to compare against.
 - **The backlink gap list** - the domains linking to two or more competitors and not to this site. This is the outreach list, so it goes in the report as a list, not as a count.
@@ -477,3 +513,40 @@ Done 13 Aug. Root layout was pointing every page at the homepage.
 **"Who" is on every item.** Some are code changes I make; some are clicks only you can do (Search Console, the Business Profile dashboard, hosting). For yours, give the exact click path.
 
 **Re-running `/audit`** updates this file, never replaces it. Ticked items keep their dates, returning problems re-open with a note, new findings append, and the AI-surface baseline gains a new dated row rather than overwriting the old one. Never wipe the history.
+
+---
+
+## The second deliverable: `audit-report.html` - the report you can put on a screen
+
+**Every run also writes one self-contained HTML page, in the Automatable design theme, and opens it.** The markdown checklist is the working file; the HTML is the thing you show - on a call, on a screen recording, or to a prospect. Same data, before → after, no jargon.
+
+**How it is built - never hand-write the HTML:**
+1. Copy `references/audit-report-template.html` to `audit-report.html` in the project root (WordPress lane: the project folder).
+2. Replace ONLY the JSON inside `<script id="audit-data" type="application/json">` at the top of the file. Every field in the template's sample JSON is required; keep the same keys and shapes. Do not touch the markup, the CSS or the script below it.
+3. Open it: `open audit-report.html` (Mac). Say the path in chat so the owner can open it themselves.
+4. **Re-write the JSON after every fix pass** (step 5 of the loop) - `after`, `issuesAfter`, `passes`, `minutes`, each layer's `after` and `fixed` line, and each fix's `status` - then say "report refreshed" so the owner reloads and watches the dial climb. The HTML is regenerated in full each time; the markdown file keeps the history.
+
+**The JSON, field by field:**
+- `mode`: `"owner"` (report + fix, the after columns are real) or `"prospect"` (report only - every after column renders as `?` or "not run yet", section 13 "what it costs to leave it" appears with `costs`, and `lostPerMonth` shows in the report card). Prospect mode never shows a green number that was not earned.
+- `before` / `after`, `issuesBefore` / `issuesAfter`, `passes`, `minutes`, `bodySentencesChanged`: the whole-site numbers. Before is the first crawl; after is the latest pass.
+- `layers`: exactly these five, in this order, so every report reads the same: On-page, Technical, AI readiness, Doorway pages, Local. Each has `before` and `after` on a **0-100 scale, whatever the layer's native unit is** - on-page and GEO = the pass percentage across all checks and pages; technical = the average of the four Lighthouse categories across templates; keywords = share of sold services with a page that ranks; doorway = 100 minus the average similarity of flagged sets (100 when none); local = 100 for a top-3 map-pack spot on every money term, scaled down by review gap and NAP conflicts. **The after score only moves when THIS loop moved it.** A layer whose fix lives in another command gets `"after": null` and a `pending` label instead of a score, rendered as an amber chip: Doorway pages and Local carry a `route` instead (see the structure rules at the end). Doorway pages get `"pending": "needs your yes"` until the merge and redirects are approved and shipped. Never show a green after number for work that has not shipped - the whole-site `after` and `issuesAfter` follow the same rule. The only things on this report that improve are things this loop changed.
+- `onpage` and `geo`: `{ pagesGraded, pagesInScope, groups:[ { name, checks:[ { t, b, a } ] } ] }`. The groups and check text come straight from `references/on-page-seo.md` (15 groups, 80 checks) and `references/geo.md` (8 groups, 38 checks) - same wording, same order, never invented or dropped. `b` = state before (`pass` | `fail`), `a` = state after (`pass` | `fail` | `routed` when the fix is writing and went to /service-page or /blog-post). A check that failed before and passes after gets a green FIXED tag automatically.
+- `technical`: `{ formFactor, runs, templates:[ { name, url, before:[perf,a11y,bp,seo], after:[...] } ] }`. One Lighthouse card per template, nothing else.
+- `other`: `[ { group, item, before, after } ]` - **"What else it changed"**: every fix that is not a check on a list. Index hygiene (private routes indexed, the site: vs sitemap vs Search Console counts, Disallow mistaken for noindex), links and redirects (404s, old URLs holding backlinks), files (sitemap.xml, robots.txt, llms.txt), speed and mobile (load time, image weight, tap targets), and anything else the loop touched. Group names are yours; keep them to two or three words. Before is red, after is green, both as short as a number allows.
+- `doorway`: `{ sets:[ { set, pages, similarity, unique, fix, after } ] }`. Empty `sets` renders the good answer. `unique` is the sentence that is actually different between siblings - the line that explains the problem on its own.
+- `local`: `{ lead, fields:[ { name, before, after, flag } ], mapPack:[ { query, top3:[names], you, youAfter } ], reviews:[ { name, count, rating, recent, replyRate } ] }`. Use the word `empty` for an unfilled profile field; it renders red.
+- `fixes`: one row per checklist item, `status` = `done` | `now` | `queued` | `byhand`, plus `who` and `changes` copied from `audit-report.md`. In the order you work them.
+- `notMeasured`: one string per skipped / sampled / inferred item with what closes it. Empty array renders "Everything in scope was measured in full."
+- `costs`: prospect mode only - the top 4-5 problems with a monthly dollar estimate each.
+
+**Rules:** plain English in every string, no Semrush jargon, no em-dashes (hyphens only), real numbers only - never a placeholder that looks like data. The sample JSON in the template is Dave's Plumbing, a made-up business: replace every value, keep every key. The `date` is the day of the latest pass. One report per site: re-running overwrites `audit-report.html`; the markdown file is where history lives.
+
+**Less text, every time (Jono, 27 Aug 2026).** The page is scanned, not read. Section titles are two or three words. No lead paragraphs, no notes. `fixed` lines are 3 to 6 words ("41 alt texts, 19 titles, 8 links"). Fix rows: `who` is "me" or "you", `changes` is 2 to 4 words. Check text is the reference wording with the explanation after the hyphen dropped, parentheticals removed, never a rewrite. The page hides what did not change: passed-before-and-still-passes checks and done fix rows sit behind "Show all" toggles, so what the reader sees first is only what moved.
+
+**Structure rules (Jono, 28 Aug 2026):**
+- **This is an audit + fix, not an SEO plan.** No Recommendations section, no off-page section, no link plan, no outreach rows on the HTML. Section 02 "Before and after" lists only the layers this loop moves (on-page, technical, AI readiness). Doorway pages and Local are **findings**: they render as their own sections after the AI card and before the fix list, each header showing the before score and a `route` pill for the command that acts on it (Doorway `"/service-page · rewrite"`, Local `"/gbp · /review-generator"`). Keywords and Off-page are not on the HTML report at all: the keyword reality check and the backlink gap stay in `audit-report.md`.
+- **The live test is NOT on the HTML report** (manual search unless the APIs are wired, and member-only material). It stays in `audit-report.md` as the dated GEO baseline. GEO groups 7 and 8 (off-site mentions, measuring citations) carry `"hidden": true` and render nowhere; the AI card shows the 31 checks the loop acts on.
+- **Doorway pages: rewrite first.** The fix is a rewrite per city with real local material (`/service-page`). Merge and 301 only the cities with genuinely nothing local, and only with approval. Each set's `fix` line says rewrite first, merge as the exception.
+- **Page by page.** `pages` is required: one entry per page in scope, `{ url, template, onpage:{ before, after, failsBefore:[], failsAfter:[], routed:[] }, geo:{ same }, perf, proof, flags:[] }`. `failsBefore` and friends are check ids in the form `onpage:<groupIndex>:<checkIndex>` / `geo:<groupIndex>:<checkIndex>`, zero-based, matching the order in the reference files. The page renders a sidebar with every URL, an "every page" table, and per-page check lists when a page is selected; site-wide it shows "failing on N pages" counts. `template` must match a name in `technical.templates`. Templates are Home, Service page, Blog post only; a city page is `"Service page"`. `flags` values: `doorway`, `cannibal`, `thin`.
+- `local` also carries `mapPackSource` (what the pack positions came from), `services:[ { name, keyword, vol, page } ]` (keyword and page may be null, they render as flags), and profile `fields` rows for `Categories · mark 10`, `Services · mark 50`, `Service areas · mark 20`, `Products · mark 20` (each valued `N of mark`) in addition to the basics. A field with `warn: true` renders amber, `flag: true` red.
+- **Waivers on the report:** `waived:[ { type, item, reason } ]` with `type` one of `platform limit` | `crawler artifact` | `owner decision`; `rawAfter` = the whole-site score with waived items counted as failures, shown next to the fixable `after`. Per page, `onpage.waived` / `geo.waived` carry the check ids that are waived; they render with a dashed dot and a WAIVED tag and count as passed in the fixable score.

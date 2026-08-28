@@ -87,3 +87,9 @@ Kill the preview server when the pass is done. If the build fails, fixing the bu
 1. **Waiting on you.** Each item: what it is, why it's blocked, and EXACTLY what to send or say to unblock it. The model: "sameAs profile links - the schema is live but has no social/profile URLs in it. Send me your Google Business Profile, LinkedIn, YouTube, whatever exists publicly, and I'll wire them in. This is the only actual checklist item waiting." If nothing is waiting, say so in one line.
 2. **Optional recommendations.** Things deliberately not applied (design tokens, deletions, anything needing approval), each with the one-line trade-off and the exact words to greenlight it: "Say the word and I'll bump it one shade."
 3. **Waived.** Each with its one-line reason AND where it will matter instead: "keyword in the H1 - inapplicable to a tagline homepage; matters on service pages and blogs."
+
+---
+
+## The report page (added 28 Aug 2026)
+
+When the loop finishes, write the same HTML report `/audit` writes: copy `references/audit-report-template.html` to `audit-report.html`, replace only the JSON block, `open` it. Scope it to the page or pages this run touched: `pages` holds only those, section 02 carries on-page, technical and AI readiness, and `other` lists the speed and image changes. Same field rules as `/audit` (see the end of `.claude/commands/audit.md`): plain English, no em-dashes, the after score moves only where this run moved it, waivers carry a type and a reason.
